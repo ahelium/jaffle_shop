@@ -5,7 +5,8 @@ version: '0.1'
 
 profile: 'jaffle_shop'
 
-model-paths: ["models"]
+#TODO: remove this after sources updates
+model-paths: ["sources","models"]
 seed-paths: ["seeds"]
 test-paths: ["tests"]
 analysis-paths: ["analysis"]
@@ -21,6 +22,14 @@ require-dbt-version: [">=1.0.0", "<2.0.0"]
 
 models:
   jaffle_shop:
-      materialized: table
+      materialized: materializedview
+      #TODO: This is an important thing to figure out.
+      #staging data is canonically just view definitions.
+      #how can we test on those w/o materializing them?
       staging:
-        materialized: view
+        materialized: materializedview
+
+tests:
+  jaffle_shop:
+    +store_failures: true
+    +schema: 'etl_failure'

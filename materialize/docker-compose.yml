@@ -1,0 +1,74 @@
+version: '3.7'
+services:
+  producer:
+    build: ../materialize/producer
+    container_name: producer
+    depends_on:
+      redpanda: { condition: service_healthy }
+    volumes:
+        - ../seeds/:/dbt/seeds
+  redpanda:
+    image: docker.vectorized.io/vectorized/redpanda:v21.11.3
+    container_name: redpanda
+    command:
+      - redpanda start
+      - --overprovisioned
+      - --smp 1
+      - --memory 1G
+      - --reserve-memory 0M
+      - --node-id 0
+      - --check=false
+      - --kafka-addr 0.0.0.0:9092
+      - --advertise-kafka-addr redpanda:9092
+      - --pandaproxy-addr 0.0.0.0:8082
+      - --advertise-pandaproxy-addr redpanda:8082
+      - --set redpanda.enable_transactions=true
+      - --set redpanda.enable_idempotence=true
+      - --set redpanda.auto_create_topics_enabled=true
+    ports:
+      - 9092:9092
+      - 8081:8081
+      - 8082:8082
+    healthcheck: { test: curl -f localhost:9644/v1/status/ready, interval: 1s, start_period: 30s }
+  materialized:
+    image: materialize/materialized:v0.26.0
+    container_name: materialized
+    init: true
+    ports:
+      - 6875:6875
+    healthcheck: {test: curl -f localhost:6875, interval: 1s, start_period: 30s}
+  mzcli:
+    image: materialize/cli
+    container_name: mzcli
+  dbt:
+    build: ../materialize/dbt
+    container_name: dbt
+    init: true
+    entrypoint: /bin/bash
+    working_dir: /usr/app/dbt/
+    ports:
+      - 8000:8080
+    volumes:
+      - ./dbt/profiles.yml:/root/.dbt/profiles.yml
+      - ./dbt/sources/:/usr/app/dbt/sources
+      - ../models/:/usr/app/dbt/models
+      - ../dbt_project.yml:/usr/app/dbt/dbt_project.yml
+    stdin_open: true
+    tty: true
+    depends_on:
+      materialized: {condition: service_healthy}
+#  grafana:
+#    image: sd2k/grafana:with-materialize-datasource-latest
+#    ports:
+#      - 3000:3000
+#    restart: unless-stopped
+#    volumes:
+#      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+#      - grafana-data:/var/lib/grafana
+#    container_name: grafana
+#    environment:
+#      GF_AUTH_ANONYMOUS_ENABLED: "true"
+#      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+#      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+#volumes:
+#  grafana-data:

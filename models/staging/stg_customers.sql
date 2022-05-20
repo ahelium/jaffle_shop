@@ -4,18 +4,24 @@ with source as (
     Normally we would select from the table here, but we are using seeds to load
     our data in this project
     #}
-    select * from {{ ref('raw_customers') }}
+    select * from {{ source('jaffle_shop','raw_customers') }}
+
+),
+
+converted AS (
+
+    SELECT cast(convert_from(data, 'utf8') as jsonb) AS data FROM source
 
 ),
 
 renamed as (
 
     select
-        id as customer_id,
-        first_name,
-        last_name
+        (data->>'id')::int as customer_id,
+        (data->>'first_name')::string as first_name,
+        (data->>'last_name')::string as last_name
 
-    from source
+    from converted
 
 )
 
