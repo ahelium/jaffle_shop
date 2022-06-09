@@ -1,11 +1,29 @@
 ## Jaffle Shop, but Streaming
 
-`jaffle_shop` is a fictional ecommerce store that used across dbt labs docs as a playground. Here we try to maintain a fork of it using Materialize as the backend database. 
+`jaffle_shop` is a fictional ecommerce store that used across dbt labs docs as a playground. 
+Here we try to maintain a fork of it using Materialize as the backend database. 
 
 ### Running the Materialize extension of jaffle_shop
-[TODO]
-Materilizes is blah... so we need sources blah...
-We've kept the data the same as the jaffle_shop demo, but instead of seeding it from a CSV, we run a little python script to send it to redpanda. 
+
+Materialize is a streaming database. we accept data from relational databases like postgres, streaming sources like kafka, and file sources like s3. 
+For this jaffle shop extension we've emulated a microservices architecture. 
+We've kept the data the same as the jaffle_shop demo, but instead of seeding it from a CSV, we run a little python script to send it to redpanda.
+
+* **Producer**
+
+   The producer just loops through the jaffle shop CSV's, makes a kafka topic for each, and sends each row the corresponding topic [`producer` directory](./producer).
+
+* **Redpanda**
+
+  The producer produces JSON-formatted events with jaffle shop info to the `raw_customers`, `raw_orders`, and `raw_payments` Redpanda topics.
+
+* **Materialize**
+
+  Materialize is set up to consume streaming jaffle shop info from Redpanda.
+
+* **dbt**
+
+  You can define your data model using SQL and our dbt-adapter just as you would any other data warehouse - join over sources, aggregate, filter, and time window, and your data will be updated in real time.
 
 ## Docker
 
@@ -71,4 +89,4 @@ materialize=> select * from public_etl_failure.unique_orders_order_id;
 (1 row)
 ```
 
-TODO: more text event failure examples.
+TODO: more event failure examples!
